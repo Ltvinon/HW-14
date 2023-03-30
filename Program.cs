@@ -9,8 +9,8 @@ using System.Threading;
 public class Program
 {
     public static int n;
-    private static object lockObject = new ();
-    private static bool isFooTurn = true;
+    private static AutoResetEvent fooDone = new AutoResetEvent(false);
+    private static AutoResetEvent barDone = new AutoResetEvent(true);
 
     public static void Main(string[] args)
     {
@@ -37,23 +37,9 @@ public class Program
         // Цикл повторення n разів.
         for (int i = 0; i < n; i++)
         {
-            lock (lockObject)
-            {
-                // Якщо не Foo черга, очікувати на іншому потоці.
-                while (!isFooTurn)
-                {
-                    Monitor.Wait(lockObject);
-                }
-
-                // Виведення "foo" на екран.
+                barDone.WaitOne();
                 Console.Write("foo");
-
-                // Помітка, що тепер черга у Bar.
-                isFooTurn = false;
-
-                // Повідомлення іншого потоку, що може виконуватися.
-                Monitor.PulseAll(lockObject);
-            }
+                fooDone.Set();
         }
     }
 
@@ -62,23 +48,9 @@ public class Program
         // Цикл повторення n разів.
         for (int i = 0; i < n; i++)
         {
-            lock (lockObject)
-            {
-                // Якщо не Bar черга, очікувати на іншому потоці.
-                while (isFooTurn)
-                {
-                    Monitor.Wait(lockObject);
-                }
-
-                // Виведення "bar" на екран.
-                Console.Write("bar");
-
-                // Помітка, що тепер черга у Foo.
-                isFooTurn = true;
-
-                // Повідомлення іншого потоку, що може виконуватися.
-                Monitor.PulseAll(lockObject);
-            }
+            fooDone.WaitOne();
+            Console.Write("bar");
+            barDone.Set();
         }
     }
 }
